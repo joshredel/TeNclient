@@ -1,0 +1,127 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:ac="com.adobe.ac.*" 
+	layout="absolute" width="100%" height="100%" 
+	verticalAlign="middle" horizontalAlign="center" 
+	defaultButton="{loginButton}" title="Login" 
+	removedFromStage="nullOutObserverPopup()">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.validators.Validator;
+			import mx.controls.Alert;
+			import org.ten.classes.Client;
+			import com.adobe.crypto.SHA1;
+			
+			/**
+			 * @private
+			 * Asks the Client class to attempt a login with the server.
+			 */
+			private function login():void
+			{
+				// first check to see if they entered valid data
+				var results:Array = Validator.validateAll([clientnameValidator, passwordValidator]);
+				
+				if(results.length > 0)
+				{
+					currentState = "EntryFailed";
+					return;
+				}
+				
+				// hash our password first
+				var hashedPassword:String = SHA1.hash(password.text);
+				
+				// show that we're waiting
+				currentState = "ProcessingLogin";
+				
+				// now request the login
+				Client.attemptLogin(clientname.text, hashedPassword);
+			}
+			
+			/**
+			 *  The observer will prevent the component from being garbage collected
+			 *  and it will still respond to data changes in memory.
+			 *  The observers will be null out, so that the popup can be garbage collected
+			 */
+			private function nullOutObserverPopup():void
+			{
+				observeLoginPassed = null;
+				observeLoginFailed = null;
+			}
+			
+			/**
+			 * @private
+			 * Handles a successful login by simply closing the window.
+			 */
+			private function handleLoginPassed():void
+			{
+				currentState = "";
+				clientname.text = "";
+				password.text = "";
+			}
+			
+			/**
+			 * @private
+			 * Handles a failed login.
+			 */
+			private function handleLoginFailed():void
+			{
+				// let them know they failed at logging in!
+				currentState = "LoginFailed";
+				
+				// reset the login failed value
+				Client.loginFailed = false;
+			}
+		]]>
+	</mx:Script>
+	
+	<!-- Observers -->
+	<ac:ObserveValue id="observeLoginPassed" source="{Client.loggedIn}" value="{true}" handler="handleLoginPassed"/>
+	<ac:ObserveValue id="observeLoginFailed" source="{Client.loginFailed}" value="{true}" handler="handleLoginFailed"/>
+	
+	<!-- Validators -->
+	<mx:StringValidator id="clientnameValidator" source="{clientname}" property="text" required="true" minLength="1"/>
+	<mx:StringValidator id="passwordValidator" source="{password}" property="text" required="true" minLength="1"/>
+	
+	<!-- States -->
+	<mx:states>
+		<mx:State name="ProcessingLogin">
+			<mx:AddChild relativeTo="{this}" position="lastChild">
+				<mx:ProgressBar indeterminate="true" labelPlacement="center" 
+					label="LOGGING IN..." width="80%"/>
+			</mx:AddChild>
+			<mx:SetProperty target="{loginForm}" name="includeInLayout" value="false"/>
+			<mx:SetProperty target="{loginForm}" name="visible" value="false"/>
+			<mx:SetProperty target="{loginBar}" name="includeInLayout" value="false"/>
+			<mx:SetProperty target="{loginBar}" name="visible" value="false"/>
+		</mx:State>
+		
+		<mx:State name="LoginFailed">
+			<mx:AddChild relativeTo="{loginForm}" position="before">
+				<mx:Label text="Login failed.  Please try again." color="red"/>
+			</mx:AddChild>
+		</mx:State>
+		
+		<mx:State name="EntryFailed">
+			<mx:AddChild relativeTo="{loginForm}" position="before">
+				<mx:Label text="Please make sure the data you entered is valid." color="red"/>
+			</mx:AddChild>
+		</mx:State>
+	</mx:states>
+	
+	<!-- Display Elements -->
+	<mx:Form id="loginForm" width="100%" height="100%">
+		<mx:FormItem label="Clientname:" required="true" width="90%">
+			<mx:TextInput id="clientname" creationComplete="focusManager.setFocus(clientname)"/>
+		</mx:FormItem>
+		
+		<mx:FormItem label="Password:" required="true" width="90%">
+			<mx:TextInput id="password" displayAsPassword="true"/>
+		</mx:FormItem>
+	</mx:Form>
+				
+	<mx:ControlBar id="loginBar" verticalAlign="middle">
+		<mx:Button id="loginButton" label="Login" click="login();"/>
+		<!--<mx:Button id="cancelButton" label="Cancel" click="removeMe();"/>-->
+	</mx:ControlBar>
+</mx:Panel>

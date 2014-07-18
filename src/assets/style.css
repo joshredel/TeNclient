@@ -1,0 +1,43 @@
+/* CSS file */
+@font-face {
+	src: url("verdana.ttf");
+	fontFamily: "verdanaEmbedded";
+	fontStyle: normal;
+	fontWeight: normal;
+	advancedAntiAliasing: true;
+}
+
+@font-face {
+	src: url("verdanai.ttf");
+	fontFamily: "verdanaEmbedded";
+	fontStyle: italic;
+	fontWeight: normal;
+	advancedAntiAliasing: true;
+}
+
+@font-face {
+	src: url("verdanab.ttf");
+	fontFamily: "verdanaEmbedded";
+	fontStyle: normal;
+	fontWeight: bold;
+	advancedAntiAliasing: true;
+}
+
+WindowedApplication {
+	fontFamily: verdanaEmbedded;
+	backgroundColor: #B30000;
+	fontSize: 12px;
+}
+
+ApplicationControlBar {
+	backgroundColor: #141414;
+	color: #FFFFFF;
+}
+
+ControlBar, Button {
+	fontSize: 10px;
+}
+
+Label {
+	color: #FFFFFF;
+}

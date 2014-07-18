@@ -1,0 +1,164 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:WindowedApplication xmlns:mx="http://www.adobe.com/2006/mxml" 
+	xmlns:local="org.ten.*" 
+	xmlns:components="org.ten.components.*" 
+	xmlns:ac="com.adobe.ac.*" 
+	layout="absolute" width="1360" height="768"
+	initialize="initializeApplication()" currentState="LoggingIn"
+	showStatusBar="false" showFlexChrome="true"
+	applicationComplete="stage.displayState = StageDisplayState.FULL_SCREEN_INTERACTIVE;"
+	invoke="storeHostname(event)"> <!--scaleX="0.941" scaleY="0.96" frameRate="60"-->
+	<!-- width="1360" height="768"-->
+	
+	<!-- Style (css) -->
+	<mx:Style source="assets/style.css"/>
+	
+	<mx:Script>
+		<![CDATA[
+			import com.adobe.crypto.SHA1;
+			
+			import mx.controls.Alert;
+			import mx.core.Application;
+			import mx.events.AIREvent;
+			import mx.events.FlexEvent;
+			
+			import org.ten.classes.Client;
+			import org.ten.classes.DataShop;
+			import org.ten.events.LoginEvent;
+			
+			[Bindable]
+			/**
+			 * @private
+			 * Our reference to the data shop.
+			 */
+			private var dataShop:DataShop = DataShop.getInstance();
+			
+			/**
+			 * Our Client (based on the login used)
+			 */
+			public var client:String;
+			
+			/**
+			 * The hostname we will use to log in to the server.
+			 */
+			public var hostname:String;
+			
+			[Bindable]
+			private var screenWidth:int = Screen.mainScreen.bounds.width;
+			
+			[Bindable]
+			private var screenHeight:int = Screen.mainScreen.bounds.height; 
+			
+			/**
+			 * @private
+			 * Handles the loading of the application and the setup of 
+			 * everything we need to run.
+			 */
+			private function initializeApplication():void
+			{
+				// center the login window
+				//this.nativeWindow.x = (Screen.mainScreen.bounds.width - this.width) / 2;
+				//this.nativeWindow.y = (Screen.mainScreen.bounds.height - this.height) / 2;
+				
+				// make the app/this window a steady size
+			}
+			
+			/**
+			 * @private
+			 * Processes the command line arguments (we really want the hostname).
+			 */
+			private function storeHostname(event:InvokeEvent):void
+			{
+				if(hostname == null || hostname == "" && event.arguments != null && dataShop.clientLoggedIn == false)
+				{
+					// get the host name from the arguments
+					var argumentPieces:Array;
+					try
+					{
+						// attempt to get it from the command line-passed arguments
+						argumentPieces = event.arguments[0].toString().split("=");
+					}
+					catch(err:Error)
+					{
+						// if we have no arguments, we'll use mcconnell
+						// TODO: this will eventually force the machine to show a login screen
+						var temp:String = "hostname=ten";
+						argumentPieces = temp.split("=");
+					}
+					hostname = argumentPieces[1];
+					
+					// login with that hostname and a hashed password
+					var hashedPassword:String = SHA1.hash("tenr0cks");
+					Client.attemptLogin(hostname, hashedPassword);
+				}
+			}
+			
+			/**
+			 * @private
+			 * Handles changes in the user logged in and matches 
+			 * the visibility of the application accordingly.
+			 */
+			private function changeEnabledState():void
+			{
+				if(dataShop.clientLoggedIn == true)
+				{
+					// change states and go full screen
+					Mouse.hide();
+					if(dataShop.currentClient.nativeScreenHeight == 1080)
+					{
+						currentState = "Running1080";
+					}
+					else
+					{
+						currentState = "Running720";
+					}
+					//stage.displayState = StageDisplayState.FULL_SCREEN_INTERACTIVE;
+				}
+				else if(dataShop.clientLoginFailed == true)
+				{
+					// show that login failed and reset the variable
+					currentState = "LoginFailed";
+					dataShop.clientLoginFailed = false;
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<!-- The States: Logging In and Running -->
+	<mx:states>
+		<mx:State name="LoggingIn">
+			<mx:AddChild relativeTo="{this}" position="firstChild">
+				<mx:Panel width="{screenWidth}" height="{screenHeight}" 
+					verticalAlign="middle" horizontalAlign="center"><!--width="100%" height="100%"-->
+					<mx:ProgressBar indeterminate="true" labelPlacement="center" 
+						label="LOGGING IN..." width="80%"/>
+				</mx:Panel>
+			</mx:AddChild>
+		</mx:State>
+		
+		<mx:State name="LoginFailed">
+			<mx:AddChild relativeTo="{this}" position="firstChild">
+				<mx:Panel width="100%" height="100%" verticalAlign="middle" horizontalAlign="center">
+					<mx:Label text="Oops, login failed.  Please contact ten@mcgilleus.ca!"/>
+				</mx:Panel>
+			</mx:AddChild>
+		</mx:State>
+		
+		<mx:State name="Running720">
+			<mx:AddChild relativeTo="{this}" position="firstChild">
+				<local:Viewer />
+			</mx:AddChild>
+		</mx:State>
+		
+		<mx:State name="Running1080">
+			<mx:AddChild relativeTo="{this}" position="firstChild">
+				<local:Viewer1080 />
+			</mx:AddChild>
+		</mx:State>
+	</mx:states>
+	
+	<!-- Observers -->
+	<ac:ObserveValue id="observeLoginPassed" source="{dataShop.clientLoggedIn}" value="{true}" handler="changeEnabledState"/>
+	<ac:ObserveValue id="observeLoginFailed" source="{dataShop.clientLoginFailed}" value="{true}" handler="changeEnabledState"/>
+	
+</mx:WindowedApplication>

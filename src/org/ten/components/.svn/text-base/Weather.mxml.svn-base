@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Panel xmlns:mx="http://www.adobe.com/2006/mxml" 
+	width="180" headerHeight="0"
+	backgroundAlpha="0.4" backgroundColor="0x343434"
+	initialize="onInit()" horizontalAlign="center"
+	borderStyle="solid" roundedBottomCorners="true"
+	cornerRadius="8" verticalScrollPolicy="off"
+	horizontalScrollPolicy="off">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.Image;
+			import mx.messaging.channels.StreamingAMFChannel;
+			import mx.containers.HBox;
+			import com.adobe.utils.DateUtil;
+			import mx.controls.Label;
+			import com.yahoo.webapis.weather.ForecastConditions;
+			import com.yahoo.webapis.weather.CurrentConditions;
+			import com.yahoo.webapis.weather.events.WeatherResultEvent;
+			import com.yahoo.webapis.weather.WeatherService;
+			import mx.rpc.http.HTTPService;
+			import mx.rpc.events.FaultEvent;
+			import mx.controls.Alert;
+			import mx.rpc.events.ResultEvent;
+			
+			[Bindable]
+			/**
+			 * @private
+			 * Holds the current temperature.
+			 */
+			private var temperature:Number;
+			
+			[Bindable]
+			/**
+			 * @private
+			 * Holds the current condition.
+			 */
+			private var condition:String;
+			
+			[Bindable]
+			/**
+			 * @private
+			 * Holds the current condition's code (for image fetching)
+			 */
+			private var conditionCode:Number;
+			
+			/**
+			 * The rest of the bindable weather information.
+			 */	
+			[Bindable]
+			private var todaysHigh:Number;
+			
+			[Bindable]
+			private var todaysLow:Number;
+			
+			[Bindable]
+			private var latersConditionCode:Number;
+			
+			[Bindable]
+			private var latersCondition:String;
+			
+			[Bindable]
+			private var tomorrowsConditionCode:Number;
+			
+			[Bindable]
+			private var tomorrowsCondition:String;
+			
+			[Bindable]
+			private var tomorrowsHigh:Number;
+			
+			[Bindable]
+			private var tomorrowsLow:Number;
+			
+			[Bindable]
+			/**
+			 * @private
+			 * The weather service we'll use to request weather.
+			 */
+			private var weatherService:WeatherService = new WeatherService();
+			
+			/**
+			 * @private
+			 * Initializes the weather service and listens for new updates.
+			 */
+			private function onInit():void
+			{
+				// initialize the weather service
+				weatherService = new WeatherService();
+				
+				// listen for responses
+				weatherService.addEventListener(WeatherResultEvent.WEATHER_LOADED, handleWeatherResult);
+			}
+			
+			/**
+			 * Gets the weather from Environment Canada's feed.
+			 */
+			public function fetchWeather():void
+			{
+				// request the weather
+				weatherService.getWeather("CAXX0301", "c");
+			}
+			
+			/**
+			 * @private
+			 * Handles the result of the weather fetch by showing 
+			 * the current weather.
+			 */
+			private function handleWeatherResult(event:WeatherResultEvent):void
+			{
+				// get the current conditions and store the information
+				var conditions:CurrentConditions = weatherService.weather.current;
+				condition = conditions.description;
+				temperature = conditions.temperature;
+				conditionCode = conditions.code;
+				
+				// get the forecast
+				var forecast:ForecastConditions = weatherService.weather.forecast[0];
+				
+				// store the information for today's high and low
+				todaysHigh = forecast.high;
+				todaysLow = forecast.low;
+				
+				// store the information for later today
+				latersConditionCode = forecast.code;
+				latersCondition = forecast.description;
+				
+				// move to tomorrow and store the information
+				forecast = weatherService.weather.forecast[1];
+				tomorrowsConditionCode = forecast.code;
+				tomorrowsCondition = forecast.description;
+				tomorrowsHigh = forecast.high;
+				tomorrowsLow = forecast.low;
+			}
+		]]>
+	</mx:Script>
+	
+	<!-- Display Elements -->
+	<!--<mx:Label text="Currently:" fontSize="20"/>-->
+	
+	<mx:Image source="{conditionCode >= 0 ? 'http://ten.mcgilleus.ca/tenapp/icons/' + conditionCode + '.png' : ''}" width="128" height="128"/>
+	
+	<mx:Label text="{condition}" fontSize="14"/>
+	
+	<mx:Label text="{temperature}&#xB0;C" fontSize="30"/>
+	
+	<!-- Today's High and Low -->
+	<mx:HBox>
+		<mx:VBox horizontalAlign="center">
+			<mx:Label text="High:" fontSize="14"/>
+			<mx:Label text="{todaysHigh}&#xB0;C" fontSize="14"/>
+		</mx:VBox>
+		<mx:VBox horizontalAlign="center">
+			<mx:Label text="Low:" fontSize="14"/>
+			<mx:Label text="{todaysLow}&#xB0;C" fontSize="14"/>
+		</mx:VBox>
+	</mx:HBox>
+	
+	<mx:Label text="Later Today:" fontSize="18"/>
+	
+	<mx:Image source="{conditionCode >= 0 ? 'http://ten.mcgilleus.ca/tenapp/icons/' + latersConditionCode + '.png' : ''}" width="64" height="64"/>
+	
+	<mx:Label text="{latersCondition}" fontSize="14"/>
+	
+	<!-- Tomorrow's Weather -->
+	<mx:Label text="Tomorrow:" fontSize="18"/>
+	
+	<mx:Image source="{conditionCode >= 0 ? 'http://ten.mcgilleus.ca/tenapp/icons/' + tomorrowsConditionCode + '.png' : ''}" width="64" height="64"/>
+	
+	<mx:Label text="{tomorrowsCondition}" fontSize="14"/>
+	
+	<mx:HBox>
+		<mx:VBox horizontalAlign="center">
+			<mx:Label text="High:" fontSize="14"/>
+			<mx:Label text="{tomorrowsHigh}&#xB0;C" fontSize="14"/>
+		</mx:VBox>
+		<mx:VBox horizontalAlign="center">
+			<mx:Label text="Low:" fontSize="14"/>
+			<mx:Label text="{tomorrowsLow}&#xB0;C" fontSize="14"/>
+		</mx:VBox>
+	</mx:HBox>
+</mx:Panel>

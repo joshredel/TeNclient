@@ -1,0 +1,13 @@
+/* CSS file */
+@font-face {
+	src: url("verdana.ttf");
+	fontFamily: "verdanaEmbedded";
+	fontStyle: normal;
+	fontWeight: normal;
+	advancedAntiAliasing: true;
+}
+
+WindowedApplication {
+	fontFamily: verdanaEmbedded;
+	fontSize: 12px;
+}

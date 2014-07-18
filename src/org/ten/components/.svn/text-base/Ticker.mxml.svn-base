@@ -1,0 +1,119 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+	backgroundImage="@Embed('assets/tenfo_background.png')" 
+	width="100%" height="40" initialize="onInit()"
+	clipContent="true" horizontalScrollPolicy="off"
+	verticalScrollPolicy="off">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.effects.easing.Linear;
+			import mx.controls.Label;
+			import org.ten.classes.TeNfo;
+			import mx.events.CollectionEvent;
+			import mx.events.PropertyChangeEvent;
+			import mx.binding.utils.ChangeWatcher;
+			import mx.collections.ArrayCollection;
+			
+			[Bindable]
+			/**
+			 * The collection of TeNfo we are to show here.
+			 */
+			public var tenfos:ArrayCollection;
+			
+			/**
+			 * @private
+			 * Listens for changes to the TeNfo collection.
+			 */
+			private function onInit():void
+			{
+				// listen for changes to collection as a whole
+				ChangeWatcher.watch(this, "tenfos", listenForTeNfoChanges);
+			}
+			
+			/**
+			 * @private
+			 * Listens for data changes in the TeNfo collection.
+			 */
+			private function listenForTeNfoChanges(event:PropertyChangeEvent):void
+			{
+				// listen for changes to the array collection
+				tenfos.addEventListener(CollectionEvent.COLLECTION_CHANGE, makeTicker);
+				
+				// now call that function for the first make of the ticker
+				makeTicker();
+			}
+			
+			/**
+			 * @private
+			 * Builds the ticker display, adding each TeNfo to the ticker.
+			 */
+			private function makeTicker(event:CollectionEvent = null):void
+			{
+				// start fresh
+				mover.end();
+				//itemHolder.removeAllChildren();
+				//itemHolder.x = this.width;
+				tenfoText.text = "";
+				
+				// add each of the TeNfos to the display
+				for each(var tenfo:TeNfo in tenfos)
+				{
+					// add the label with the proper text
+					//itemHolder.addChild(newLabel(tenfo.content));
+					tenfoText.text += tenfo.content + " # ";
+					
+					// add the separator
+					// (which for now is text, will be an image)
+					//itemHolder.addChild(newLabel("##"));
+				}
+				
+				// start the mover
+				//mover.xTo = -(itemHolder.width);
+				tenfoText.validateNow();
+				mover.xTo = -(tenfoText.width);
+				mover.play();
+				//itemHolder.move(-(itemHolder.width), 0);
+			}
+			
+			/**
+			 * @private
+			 * Helper which creates a label with the passed text.
+			 */
+			private function newLabel(text:String):Label
+			{
+				var label:Label = new Label();
+				label.text = text;
+				label.setStyle("clipContent", true);
+				label.setStyle("fontSize", 24);
+				return label;
+			}
+			
+			/**
+			 * @private
+			 * Moves the ticker back to its original position.
+			 */
+			private function resetTicker():void
+			{
+				mover.end();
+				//itemHolder.x = this.width;
+				//mover.xTo = -itemHolder.width;
+				tenfoText.x = this.width;
+				mover.xTo = -(tenfoText.width);
+				mover.play();
+				//itemHolder.move(-(itemHolder.width), 0);
+			}
+		]]>
+	</mx:Script>
+	
+	<!-- Display Elements -->
+	<!--<mx:HBox id="itemHolder" width="100%" height="100%" clipContent="false"
+		x="{this.width}" horizontalScrollPolicy="off" verticalScrollPolicy="off" 
+		includeInLayout="false"/>-->
+	<mx:Text id="tenfoText" x="{this.width}" fontSize="24"/> 
+	
+	<!-- Effects (for moving) -->
+	<mx:Move id="mover" duration="20000" target="{tenfoText}" 
+		effectEnd="resetTicker()" easingFunction="{Linear.easeNone}"/>
+	
+</mx:Canvas>

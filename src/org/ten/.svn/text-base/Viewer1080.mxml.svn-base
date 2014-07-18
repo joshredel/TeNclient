@@ -1,0 +1,286 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:Canvas xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:efflex="org.efflex.mx.viewStackEffects.*"
+	xmlns:scroll="com.keaura.controls.*"
+	xmlns:ac="com.adobe.ac.*" 
+	xmlns:utils="flash.utils.*" 
+	xmlns:components="org.ten.components.*"
+	width="100%" height="100%" creationComplete="finishCreation()"
+	backgroundColor="0x000000">
+	<!--width="100%" height="100%"-->
+	
+	<mx:Script>
+		<![CDATA[
+			import org.ten.components.SWFContainer;
+			import org.ten.classes.TeNfo;
+			import org.ten.classes.DataShop;
+			import org.ten.classes.Client;
+			import mx.collections.ArrayCollection;
+			import mx.binding.utils.BindingUtils;
+			import mx.controls.Alert;
+			import mx.binding.utils.ChangeWatcher;
+			import org.ten.components.SlideContainer;
+			import org.ten.classes.Slide;
+			import org.ten.events.SlideEvent;
+			
+			[Bindable]
+			/**
+			 * @private
+			 * Our reference to the data shop.
+			 */
+			private var dataShop:DataShop = DataShop.getInstance();
+			
+			[Bindable]
+			/**
+			 * @private
+			 * The index of the current slide being viewed.
+			 */
+			public var _currentSlideIndex:Number = 0;
+			
+			/**
+			 * @private
+			 * A reference to the timer which handles content refreshes.
+			 */
+			private var refreshTimer:Timer;
+			
+			/**
+			 * @private
+			 * A reference to the slide transition timer.
+			 */
+			private var countDownTimer:Timer;
+			
+			[Bindable]
+			/**
+			 * Setter for the current slide index.  Makes sure we don't
+			 * go over the max index.
+			 */
+			public function set currentSlideIndex(newIndex:Number):void
+			{
+				if(newIndex > slideStack.numChildren - 1)
+				{
+					_currentSlideIndex = 0;
+				}
+				else
+				{
+					_currentSlideIndex = newIndex;
+				}
+			}
+			
+			/**
+			 * Getter for the current slide inex; simply returns the value.
+			 */
+			public function get currentSlideIndex():Number
+			{
+				return _currentSlideIndex;
+			}
+			
+			/**
+			 * @private
+			 * Keeps a track of the number of slides that have loaded their content.
+			 */
+			private var loadedSlidesCount:Number = 0;
+			
+			/**
+			 * @private
+			 * Finishes the creation of the display once the display objects
+			 * themselves have finished loading.  This will properly place elements
+			 * for TeNclient in their respective locations.
+			 */
+			private function finishCreation():void
+			{
+				// start the scroller
+				// we'll do it here to prevent problems elsewhere
+				tenfoScroller.start();
+				
+				// hide the mouse
+				Mouse.hide();
+				
+				// 1080p screens
+				tenfoHolder.y = 1080  - tenfoHolder.height;
+				widgetHolder.x = 1920 - widgetHolder.width;
+				
+				
+				// listen for slide complete and load events
+				slideStack.addEventListener(SlideEvent.SLIDE_LOADED, handleSlideLoadComplete);
+				
+				// listen for the slides to be fetched
+				ChangeWatcher.watch(dataShop, "slides", populateSlides);
+				ChangeWatcher.watch(dataShop, "tenfos", populateTeNfo);
+				
+				// get all of our data
+				refreshContent();
+				
+				// add timers to refresh the content
+				refreshTimer = new Timer(600000);
+				refreshTimer.addEventListener(TimerEvent.TIMER, refreshContent);
+				refreshTimer.start();
+			}
+			
+			/**
+			 * @private
+			 * Asks the server for fresh data.
+			 */
+			private function refreshContent(event:TimerEvent = null):void
+			{
+				// get the slides!
+				Slide.getMyClientsSlides();
+				
+				// get the TeNfos
+				//populateTeNfo();
+				TeNfo.getMyClientsTeNfos();
+				
+				// get the weather
+				weather.fetchWeather();
+			}
+			
+			/**
+			 * @private
+			 * Requests the slides and creates Slide Containers for each of them.
+			 * These containers are then ordered in the view stack.
+			 */
+			private function populateSlides(object:Object = null):void
+			{
+				if(dataShop.slides.length > 0)
+				{
+					// start fresh
+					slideStack.removeAllChildren();
+					loadedSlidesCount = 0;
+					if(countDownTimer != null)
+					{
+						countDownTimer.stop();
+						countDownTimer.removeEventListener(TimerEvent.TIMER, nextSlide);
+					}
+					countDownTimer = null;
+					
+					// loop through all of this client's slides
+					for each(var slide:Slide in dataShop.slides)
+					{
+						// create a new slide container
+						var newSlideContainer:SlideContainer = new SlideContainer();
+						
+						// add it!
+						slideStack.addChild(newSlideContainer);
+						
+						// set the slide
+						newSlideContainer.slide = slide;
+						trace("image: " + slide.fileLocation);
+					}
+					
+//					// FOR LAB DEMO PURPOSES
+//					
+//					var demoContainer:SWFContainer = new SWFContainer();
+//					slideStack.addChild(demoContainer);
+//					
+//					// END LAB DEMO PURPOSES
+					
+					// set the slide to something not displayable (so we don't see anything!)
+					currentSlideIndex = -1;
+				}
+			}
+			
+			/**
+			 * @private
+			 * Counts up as slides load their content and plays the show 
+			 * once all of them have been loaded.
+			 */
+			private function handleSlideLoadComplete(event:SlideEvent):void
+			{
+				// increment the number of slides loaded
+				loadedSlidesCount++;
+				
+				// see if we have loaded everything
+				if(loadedSlidesCount == slideStack.numChildren) // NOTE NOTE NOTE: +1 added for lab demo  REMOVE AFTER COMPLETION
+				{
+					// we have so start the show
+					currentSlideIndex = -1; // was 0, and this FOR SURE worked, but it skips the first slide!
+					nextSlide(null);
+					
+					// start the timer, but only if we have more than one slide
+					if(dataShop.slides.length >= 2)
+					{
+						countDownTimer = new Timer(dataShop.slides.getItemAt(0).durationTime);
+						countDownTimer.addEventListener(TimerEvent.TIMER, nextSlide);
+						countDownTimer.start();
+					}
+				}
+			}
+			
+			/**
+			 * @private
+			 * Requests all TeNfos and displays their content in the scroller.
+			 */
+			private function populateTeNfo(object:Object = null):void
+			{
+				if(dataShop.tenfos.length > 0)
+				{
+					// loop through all of this client's TeNfos
+					var text:String = "";
+					for each(var tenfo:TeNfo in dataShop.tenfos)
+					{
+						text += tenfo.content + "  |  ";
+						
+					}
+					
+					// trim the tailing two spaces
+					if(dataShop.tenfos.length > 1)
+					{
+						text = text.substr(0, text.length - 2);
+					}
+					else
+					{
+						text = text.substr(0, text.length - 5);
+					}
+					
+					// set the text
+					//var text:String = "";
+					//text += "Welcome to TeN  |  ";
+					//text += "Watch here for updates from around the school!  |  ";
+					//text += "Contact ten@mcgilleus.ca to post information  |";
+					
+					tenfoScroller.text = "";
+					tenfoScroller.text = text;
+				}
+			}
+			
+			/**
+			 * @private
+			 * Moves to the next slide once the current slide has completed.
+			 */
+			private function nextSlide(event:Event):void
+			{
+				// go to the next slide
+				currentSlideIndex++;
+				
+				// set the new duration
+				if(countDownTimer != null)
+				{
+					// try catch added for LAB DEMO PURPOSES, REMOVE LATER
+//					try
+//					{
+						countDownTimer.delay = dataShop.slides.getItemAt(currentSlideIndex).durationTime;
+//					}
+//					catch(err:Error)
+//					{
+//						countDownTimer.delay = 4000;
+//					}
+				}
+			}
+		]]>
+	</mx:Script>
+	
+	<!-- Display Elements -->
+	<mx:ViewStack id="slideStack" width="1639" height="1024" selectedIndex="{_currentSlideIndex}"/> <!-- width="100%" height="100%" -->
+	
+	<mx:VBox id="widgetHolder" width="281" height="1024" 
+		horizontalAlign="center" verticalAlign="middle"><!-- width="389" -->
+		<mx:SWFLoader id="clock" source="http://ten.mcgilleus.ca/tenapp/clocks/flipclock24.swf" width="280"/>
+		<components:Weather id="weather" scaleX="1.444" scaleY="1.444"/>
+	</mx:VBox>
+	
+	<mx:Canvas id="tenfoHolder" width="1920" height="56"  
+		backgroundImage="@Embed('assets/tenfo_background_1080.png')">
+		<scroll:ScrollingText id="tenfoScroller" width="100%" height="100%" direction="rightToLeft" speed="3" 
+			fontSize="34" color="0xFFFFFF"/>
+	</mx:Canvas>
+	
+</mx:Canvas>

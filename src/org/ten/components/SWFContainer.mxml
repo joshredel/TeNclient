@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="utf-8"?>
+<mx:HBox xmlns:mx="http://www.adobe.com/2006/mxml"
+	xmlns:efflex="org.efflex.mx.viewStackEffects.*"
+	width="100%" height="100%" show="startCountDown()" 
+	removed="cleanUp()" horizontalAlign="center" 
+	hideEffect="{sliderEffect}" showEffect="{sliderEffect}" 
+	backgroundSize="100%" backgroundImage="@Embed('assets/background.jpg')">
+	
+	<mx:Script>
+		<![CDATA[
+			import mx.controls.Alert;
+			import mx.controls.Image;
+			import mx.events.PropertyChangeEvent;
+			import mx.binding.utils.ChangeWatcher;
+			import org.ten.classes.Slide;
+			import org.ten.events.SlideEvent;
+			
+			[Bindable]
+			/**
+			 * The slide which is being displayed in this container.
+			 */
+			public var slide:org.ten.classes.Slide;
+			
+			[Bindable]
+			/**
+			 * Marks whether the slide image has been loaded or not.
+			 */
+			public var loadComplete:Boolean = false;
+			
+			/**
+			 * @private
+			 * Begins the countdown once the slide is shown.
+			 */
+			private function startCountDown():void
+			{
+//				countDown.play();
+			}
+			
+			/**
+			 * @private
+			 * Handles the load completion of a slide by 
+			 * setting the property here as such.
+			 */
+			private function handleLoadComplete(event:Event = null):void
+			{
+				// mark that we've loaded and notify the parent
+				loadComplete = true;
+				this.parent.dispatchEvent(new SlideEvent(SlideEvent.SLIDE_LOADED));
+			}
+			
+			/**
+			 * @private
+			 * Handles the completion of the count down by telling
+			 * the parent container that we have completed this slide.
+			 */
+			private function notifyOfCompletion(event:Event = null):void
+			{
+				// tell the parent we've completed a slide
+				this.parent.dispatchEvent(new SlideEvent(SlideEvent.SLIDE_COMPLETE));
+				Alert.show("done");
+			}
+			
+			/**
+			 * @private
+			 * When the slide is removed from the player,
+			 * we should clean everything up!  This will help prevent
+			 * memory leaks.
+			 */
+			private function cleanUp():void
+			{
+				// unload the image and call the garbage collector
+				image.unloadAndStop(true);
+				
+//				// stop the transition timer
+//				countDown.stop();
+			}
+		]]>
+	</mx:Script>
+	
+	<!-- The item to hold the slide -->
+	<mx:SWFLoader id="image" complete="handleLoadComplete()"
+		source="http://ten.mcgilleus.ca/labdemo/demo.swf"/>
+	
+	<!-- Slide Effect -->
+	<!--<efflex:CoverFlowPapervision3D id="sliderEffect" duration="700" transparent="true" 
+		zOffset="1000" angle="45" numSegmentsHeight="6" numSegmentsWidth="6"/>-->
+	<!-- z of 1500 and angle 90 is also ok... -->
+	<!--<efflex:Slide id="sliderEffect" direction="left" duration="700" transparent="true"/>-->
+	<efflex:Fade id="sliderEffect" duration="700"/>
+	
+	<!-- Countdown Effect -->
+	<!--<mx:Pause id="countDown" duration="10000" effectEnd="notifyOfCompletion()"/>-->
+	
+</mx:HBox>
